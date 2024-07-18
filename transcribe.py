@@ -18,6 +18,18 @@ audio.export(wav_file_path, format="wav")
 recognizer = sr.Recognizer()
 
 
+# Test network connectivity
+def test_connectivity():
+    try:
+        response = os.system("ping -c 1 google.com")
+        if response == 0:
+            print("Network connectivity: OK")
+        else:
+            print("Network connectivity: FAILED")
+    except Exception as e:
+        print(f"Error testing network connectivity: {e}")
+
+
 # Transcribe with Google Speech Recognition
 def transcribe_google():
     max_retries = 5
@@ -106,6 +118,9 @@ def transcribe_amazon():
         print(f"Amazon Transcribe error: {e}")
     return None
 
+
+# Test connectivity before attempting transcription
+test_connectivity()
 
 # Attempt transcription with Google first, then Azure, then Amazon
 transcription = transcribe_google()
