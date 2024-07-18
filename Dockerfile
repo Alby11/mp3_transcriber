@@ -10,8 +10,8 @@ COPY requirements.txt ./
 # Install any needed packages specified in requirements.txt
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Install ffmpeg
-RUN apt-get update && apt-get install -y ffmpeg
+# Install ffmpeg, ping, and curl
+RUN apt-get update && apt-get install -y ffmpeg iputils-ping curl
 
 # Copy the rest of the application
 COPY . .
