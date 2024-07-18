@@ -1,5 +1,3 @@
-azure-cognitiveservices-speech
-boto3
-ffmpeg
 pydub
 speechrecognition
+requests

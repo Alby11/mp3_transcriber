@@ -1,8 +1,8 @@
+import requests
 import speech_recognition as sr
 from pydub import AudioSegment
 import os
-import signal
-import time  # Add the missing import for time
+import time
 
 # Paths
 mp3_file_path = "audio.mp3"  # MP3 file in the same directory as the Dockerfile
@@ -14,19 +14,6 @@ audio.export(wav_file_path, format="wav")
 
 # Initialize recognizer
 recognizer = sr.Recognizer()
-
-
-# Function to handle timeout
-class TimeoutException(Exception):
-    pass
-
-
-def timeout_handler(signum, frame):
-    raise TimeoutException
-
-
-# Set the signal handler
-signal.signal(signal.SIGALRM, timeout_handler)
 
 
 # Test network connectivity
@@ -46,49 +33,46 @@ def test_connectivity():
         print(f"Error testing network connectivity: {e}")
 
 
-# Transcribe with Google Speech Recognition
-def transcribe_google():
+# Manually interact with Google Speech Recognition API
+def transcribe_google_manual():
+    google_speech_api_url = "https://www.google.com/speech-api/v2/recognize?output=json&lang=en-us&key=YOUR_GOOGLE_API_KEY"
+    headers = {
+        "Content-Type": "audio/l16; rate=16000",
+    }
+
+    with open(wav_file_path, "rb") as audio_file:
+        audio_data = audio_file.read()
+
     max_retries = 5
     for attempt in range(max_retries):
         try:
-            with sr.AudioFile(wav_file_path) as source:
-                audio_data = recognizer.record(source)
-
-            # Start the timer
-            signal.alarm(20)  # Increase to 20 seconds timeout
-            try:
-                transcription = recognizer.recognize_google(audio_data)
-                signal.alarm(0)  # Cancel the timer
+            response = requests.post(
+                google_speech_api_url, headers=headers, data=audio_data, timeout=30
+            )
+            if response.status_code == 200:
+                result = response.json()
+                transcription = result["result"][0]["alternative"][0]["transcript"]
                 return transcription
-            except TimeoutException:
+            else:
                 print(
-                    f"Google Speech Recognition timed out. Retrying... ({attempt + 1}/{max_retries})"
+                    f"Google API error: {response.status_code}. Retrying... ({attempt + 1}/{max_retries})"
                 )
-            except sr.RequestError as e:
-                print(
-                    f"Google RequestError: {e}. Retrying... ({attempt + 1}/{max_retries})"
-                )
-            except sr.UnknownValueError:
-                print("Google Speech Recognition could not understand the audio.")
-                return None
-            except Exception as e:
-                print(f"An unexpected error occurred with Google: {e}")
-                return None
-            finally:
-                signal.alarm(0)  # Ensure the timer is canceled
-
-            time.sleep(5)  # Wait for 5 seconds before retrying
+        except requests.exceptions.RequestException as e:
+            print(f"RequestException: {e}. Retrying... ({attempt + 1}/{max_retries})")
         except Exception as e:
-            print(f"An unexpected error occurred during retry: {e}")
-            return None
+            print(
+                f"An unexpected error occurred with Google API: {e}. Retrying... ({attempt + 1}/{max_retries})"
+            )
+
+        time.sleep(5)  # Wait for 5 seconds before retrying
     return None
 
 
 # Test connectivity before attempting transcription
 test_connectivity()
 
-# Attempt transcription with Google
-transcription = transcribe_google()
+# Attempt transcription with manual Google API interaction
+transcription = transcribe_google_manual()
 if transcription:
     print("Transcription:")
     print(transcription)
